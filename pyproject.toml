@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hermes"
+version = "0.1.0"
+description = "Assistente que observa conversas e gera artefatos úteis"
+requires-python = ">=3.10"
+dependencies = [
+    "sounddevice>=0.5.1",
+    "numpy>=1.26,<2.0",
+    "faster-whisper>=1.0.3",
+    "openwakeword>=0.6.0",
+    "ollama>=0.3.0",
+    "python-dotenv>=1.0.0",
+    "fpdf2>=2.7.9",
+]
+
+[project.scripts]
+hermes = "hermes.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
