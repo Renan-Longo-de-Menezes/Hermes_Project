@@ -4,7 +4,7 @@ Assistente que **observa conversas** (das quais não participa), interpreta o
 contexto e gera artefatos úteis — como resumos em PDF com referências.
 
 > **Fase 0** — Prova de conceito: acionamento → gravação → transcrição →
-> resumo (LLM) → PDF
+> resumo (LLM) → PDF.
 
 ## ⚠️ Privacidade e consentimento
 O HERMES grava conversas. **Use apenas com o consentimento de todos os
