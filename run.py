@@ -1,5 +1,5 @@
 """Ponto de entrada do HERMES."""
-import sys
+import sys 
 from pathlib import Path
 
 # Adiciona a pasta src/ ao path para o Python encontrar o pacote hermes
