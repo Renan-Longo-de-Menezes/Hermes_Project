@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-def _bool(value: str, default: bool = False) -> bool:
+def _bool(value: str, default: bool = False) -> bool: 
     if not value:
         return default
     return value.strip().lower() in {"1", "true", "yes", "sim"}
