@@ -12,7 +12,7 @@ from hermes.audio.wake_word import WakeWordEngine
 from hermes.brain.llm import Summarizer
 from hermes.config import settings
 from hermes.output.pdf_builder import PdfBuilder
-from hermes.stt.transcriber import Transcriber
+from hermes.stt.transcriber import Transcriber 
 
 
 class HermesApp:
