@@ -1,0 +1,1 @@
+from hermes.config import settings

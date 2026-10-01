@@ -1,61 +1,114 @@
-"""Cérebro do HERMES: interpreta a transcrição e gera o resumo."""
+"""Interface com LLMs para resumo e análise."""
 from __future__ import annotations
 
 from hermes.config import Settings
 
-SUMMARY_PROMPT = """Você é o HERMES, um assistente que observa conversas das quais não participa \
-e produz resumos úteis e bem organizados.
 
-Abaixo está a transcrição de uma conversa (pode conter múltiplos falantes):
+class LLMClient:
+    """Cliente unificado para Ollama e OpenAI."""
 
---- INÍCIO DA TRANSCRIÇÃO ---
-{transcript}
---- FIM DA TRANSCRIÇÃO ---
+    def __init__(self, settings: Settings):
+        self.settings = settings
+        self._client = None
 
-Gere um resumo estruturado em {language}, com as seguintes seções:
+    @property
+    def client(self):
+        if self._client is None:
+            if self.settings.llm_provider == "ollama":
+                from ollama import Client
+                self._client = Client(host=self.settings.ollama_host)
+            else:
+                from openai import OpenAI
+                self._client = OpenAI(api_key=self.settings.openai_api_key)
+        return self._client
 
-1. **Tema principal** — identifique em poucas frases sobre o que a conversa tratou.
-2. **Pontos-chave** — liste os principais assuntos/argumentos discutidos.
-3. **Conclusões / encaminhamentos** — o que ficou decidido ou concluído.
-4. **Próximos passos** — ações ou pendências identificadas (se houver).
+    def chat(self, prompt: str, system: str = "") -> str:
+        """Envia um prompt e retorna a resposta."""
+        messages = []
+        if system:
+            messages.append({"role": "system", "content": system})
+        messages.append({"role": "user", "content": prompt})
 
-Seja claro, objetivo e fiel ao conteúdo. Não invente informações que não estejam na transcrição.
-Responda já formatado para ser inserido em um documento."""
+        if self.settings.llm_provider == "ollama":
+            response = self.client.chat(
+                model=self.settings.ollama_model,
+                messages=messages,
+            )
+            return response["message"]["content"]
+        else:
+            response = self.client.chat.completions.create(
+                model=self.settings.openai_model,
+                messages=messages,
+            )
+            return response.choices[0].message.content
 
 
 class Summarizer:
     def __init__(self, settings: Settings):
         self.settings = settings
+        self.llm = LLMClient(settings)
 
-    def summarize(self, transcript: str) -> str:
-        prompt = SUMMARY_PROMPT.format(
-            transcript=transcript,
-            language=self.settings.summary_language,
-        )
-        if self.settings.llm_provider == "openai":
-            return self._summarize_openai(prompt)
-        return self._summarize_ollama(prompt)
+    def summarize(self, transcript: str, mode: str = "resumo") -> str:
+        """Gera análise da transcrição conforme o modo escolhido.
+
+        Modos:
+          - resumo: resumo clássico + referências
+          - pros_contras: análise de prós e contras
+          - moral: análise moral/ética
+        """
+        prompts = {
+            "resumo": self._prompt_resumo,
+            "pros_contras": self._prompt_pros_contras,
+            "moral": self._prompt_moral,
+        }
+
+        prompt_fn = prompts.get(mode, self._prompt_resumo)
+        prompt = prompt_fn(transcript)
+
+        print(f"🤖 Resumindo com {self.settings.llm_provider} ({self.settings.ollama_model})...")
+        return self.llm.chat(prompt)
 
     # ------------------------------------------------------------------
-    def _summarize_ollama(self, prompt: str) -> str:
-        import ollama
-
-        print(f"🤖 Resumindo com Ollama ({self.settings.ollama_model})...")
-        client = ollama.Client(host=self.settings.ollama_host)
-        response = client.chat(
-            model=self.settings.ollama_model,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        return response["message"]["content"].strip()
-
+    # Prompts
     # ------------------------------------------------------------------
-    def _summarize_openai(self, prompt: str) -> str:
-        from openai import OpenAI
-
-        print(f"🤖 Resumindo com OpenAI ({self.settings.openai_model})...")
-        client = OpenAI(api_key=self.settings.openai_api_key)
-        response = client.chat.completions.create(
-            model=self.settings.openai_model,
-            messages=[{"role": "user", "content": prompt}],
+    @staticmethod
+    def _prompt_resumo(transcript: str) -> str:
+        return (
+            "Você é um assistente especializado em analisar transcrições de áudio.\n\n"
+            "Analise a transcrição abaixo e gere um relatório estruturado em Markdown com:\n"
+            "1. **Tema principal** (1-2 frases)\n"
+            "2. **Pontos-chave** (lista com bullets)\n"
+            "3. **Conclusões / Encaminhamentos**\n"
+            "4. **Próximos passos** (se houver)\n"
+            "5. **Referências acadêmicas sugeridas** (2-3 temas/palavras-chave para pesquisa)\n\n"
+            f"Transcrição:\n{transcript}"
         )
-        return response.choices[0].message.content.strip()
+
+    @staticmethod
+    def _prompt_pros_contras(transcript: str) -> str:
+        return (
+            "Você é um analista crítico especializado em debates e discussões.\n\n"
+            "Analise a transcrição abaixo e gere um relatório estruturado em Markdown com:\n"
+            "1. **Tema central** (1-2 frases)\n"
+            "2. **Argumentos a favor** (lista com bullets)\n"
+            "3. **Argumentos contra** (lista com bullets)\n"
+            "4. **Pontos neutros / fatos objetivos**\n"
+            "5. **Conclusão equilibrada** (parágrafo)\n\n"
+            f"Transcrição:\n{transcript}"
+        )
+
+    @staticmethod
+    def _prompt_moral(transcript: str) -> str:
+        return (
+            "Você é um especialista em ética e filosofia moral.\n\n"
+            "Analise a transcrição abaixo sob uma perspectiva ética/moral e gere um relatório estruturado em Markdown com:\n"
+            "1. **Tema central** (1-2 frases)\n"
+            "2. **Questões éticas identificadas** (lista)\n"
+            "3. **Análise sob diferentes perspectivas morais**:\n"
+            "   - Utilitarismo (consequências)\n"
+            "   - Deontologia (deveres/regras)\n"
+            "   - Ética das virtudes (caráter)\n"
+            "4. **Dilemas morais** (se houver)\n"
+            "5. **Conclusão ética** (parágrafo)\n\n"
+            f"Transcrição:\n{transcript}"
+        )

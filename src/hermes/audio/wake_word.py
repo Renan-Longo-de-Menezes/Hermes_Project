@@ -9,6 +9,7 @@ Dois modos:
 from __future__ import annotations
 
 import threading
+import time
 from typing import Callable
 
 from hermes.config import Settings
@@ -18,12 +19,14 @@ class WakeWordEngine:
     def __init__(self, settings: Settings):
         self.settings = settings
         self._on_trigger: Callable[[], None] | None = None
+        self._last_trigger_time = 0.0
+        self._cooldown_seconds = 3.0  # ignora triggers por 3s após acionamento
 
     # ------------------------------------------------------------------
     # Modo teclado
     # ------------------------------------------------------------------
     def _keyboard_loop(self) -> None:
-        print("⌨️  Modo teclado: pressione ENTER para ligar/desligar o HERMES.")
+        print("️  Modo teclado: pressione ENTER para ligar/desligar o HERMES.")
         while True:
             input()  # aguarda ENTER
             if self._on_trigger:
@@ -32,26 +35,25 @@ class WakeWordEngine:
     # ------------------------------------------------------------------
     # Modo wake word (openWakeWord)
     # ------------------------------------------------------------------
-    def _wake_word_loop(self) -> None:
+    def _wake_word_loop(self, stream) -> None:
         import numpy as np
         from openwakeword.model import Model
 
-        print(f"🔉 Carregando modelo de wake word: '{self.settings.wake_word_model}'...")
+        print(f" Carregando modelo de wake word: '{self.settings.wake_word_model}'...")
         model = Model(wakeword_models=[self.settings.wake_word_model])
-
-        import sounddevice as sd
-        from hermes.audio.capture import AudioRecorder
-
-        recorder = AudioRecorder(self.settings)
         print("🎧 Ouvindo o wake word...")
 
-        with recorder.stream() as stream:
-            while True:
-                chunk, _ = stream.read(self.settings.chunk_samples)
-                chunk = chunk.flatten().astype(np.int16)
-                prediction = model.predict(chunk)
-                score = float(prediction[self.settings.wake_word_model])
-                if score > self.settings.wake_threshold and self._on_trigger:
+        while True:
+            chunk, _ = stream.read(self.settings.chunk_samples)
+            chunk = chunk.flatten().astype(np.int16)
+            prediction = model.predict(chunk)
+            score = float(prediction[self.settings.wake_word_model])
+            
+            # Cooldown: ignora triggers muito próximos
+            now = time.time()
+            if score > self.settings.wake_threshold and (now - self._last_trigger_time) > self._cooldown_seconds:
+                self._last_trigger_time = now
+                if self._on_trigger:
                     self._on_trigger()
 
     # ------------------------------------------------------------------
@@ -60,6 +62,6 @@ class WakeWordEngine:
         self._on_trigger = on_trigger
         if self.settings.keyboard_mode:
             thread = threading.Thread(target=self._keyboard_loop, daemon=True)
-        else:
-            thread = threading.Thread(target=self._wake_word_loop, daemon=True)
-        thread.start()
+            thread.start()
+        # Nota: o modo wake word agora recebe o stream via método `feed()`
+        # (ver main.py)

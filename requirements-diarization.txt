@@ -1,0 +1,2 @@
+# requirements-diarization.txt (só se quiser diariação)
+pyannote.audio>=3.1.0
