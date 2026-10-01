@@ -15,7 +15,7 @@ from hermes.output.pdf_builder import PdfBuilder
 from hermes.stt.transcriber import Transcriber 
 
 
-class HermesApp:
+class HermesApp: 
     def __init__(self):
         self.settings = settings
         self.recorder = AudioRecorder(self.settings)
