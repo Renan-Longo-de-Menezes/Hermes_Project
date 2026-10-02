@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from hermes.config import Settings
-from hermes.brain.llm import Summarizer
+from hermes.brain.llm_client import LLMClient
 
 
 # Categorias possíveis
@@ -21,7 +21,7 @@ CATEGORIES = [
 class Classifier:
     def __init__(self, settings: Settings):
         self.settings = settings
-        self.summarizer = Summarizer(self.settings)
+        self.llm = LLMClient(settings)
 
     def classify(self, transcript: str) -> str:
         """Classifica o tema da conversa. Retorna uma das CATEGORIES."""
@@ -32,7 +32,7 @@ class Classifier:
             "Responda APENAS com o nome da categoria, sem explicações.\n\n"
             f"Transcrição:\n{transcript[:2000]}"  # limita para economizar tokens
         )
-        response = self.summarizer.llm.chat(prompt).strip().lower()
+        response = self.llm.chat(prompt).strip().lower()
 
         # Valida se a resposta está nas categorias
         for cat in CATEGORIES:

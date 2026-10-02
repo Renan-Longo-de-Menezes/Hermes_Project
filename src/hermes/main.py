@@ -211,27 +211,28 @@ class HermesApp:
             with self.recorder.stream() as stream:
                 print("✅ Stream aberto. Aguardando acionamento...\n")
 
-                if not self.settings.keyboard_mode:
-                    wake_thread = threading.Thread(
-                        target=engine._wake_word_loop,
-                        args=(stream,),
-                        daemon=True,
-                    )
-                    wake_thread.start()
+                # Loop ÚNICO de leitura do stream:
+                # - no modo teclado, ENTER dispara on_trigger pela thread dedicada
+                # - no modo wake word, cada chunk é alimentado no engine.feed()
+                while True:
+                    chunk, overflowed = stream.read(self.settings.chunk_samples)
+                    if overflowed:
+                        print("⚠️  Buffer overflow")
 
-                try:
-                    while True:
-                        chunk, overflowed = stream.read(self.settings.chunk_samples)
-                        if overflowed:
-                            print("⚠️  Buffer overflow")
-                        if self.recording:
-                            self.buffer.append(chunk.flatten())
-                            elapsed = time.time() - self.started_at
-                            if elapsed > self.settings.max_recording_seconds:
-                                print("⏱️  Limite de gravação atingido.")
-                                self._stop_and_process()
-                except KeyboardInterrupt:
-                    print("\n👋  HERMES encerrado.")
+                    flat = chunk.flatten()
+
+                    if not self.settings.keyboard_mode:
+                        engine.feed(flat)
+
+                    if self.recording:
+                        self.buffer.append(flat)
+                        elapsed = time.time() - self.started_at
+                        if elapsed > self.settings.max_recording_seconds:
+                            print("⏱️  Limite de gravação atingido.")
+                            self._stop_and_process()
+
+        except KeyboardInterrupt:
+            print("\n👋  HERMES encerrado.")
         except Exception as e:
             print(f"❌ Erro ao abrir stream: {e}")
             print("Tentando fallback...")
