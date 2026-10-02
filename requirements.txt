@@ -7,8 +7,17 @@ ollama>=0.3.0
 python-dotenv>=1.0.0
 pydantic>=2.0.0
 
-# PDF (xhtml2pdf — sem dependências externas)
+# PDF
 xhtml2pdf>=0.2.15
+
+# Fase 2: Memória + RAG
+chromadb>=0.5.0
+
+# Fase 2: Referências
+httpx>=0.27.0
+
+# Fase 2: TTS (opcional)
+edge-tts>=6.1.0
 
 # Diariação (opcional — pesado)
 # pyannote.audio>=3.1.0

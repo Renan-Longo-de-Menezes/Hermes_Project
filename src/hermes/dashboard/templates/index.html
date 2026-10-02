@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>HERMES Dashboard</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 2rem;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 2px solid #1e293b;
+    }
+    h1 { color: #38bdf8; font-size: 1.8rem; }
+    .status-badge {
+      padding: 0.4rem 1rem;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .status-idle { background: #334155; color: #94a3b8; }
+    .status-listening { background: #1e3a8a; color: #93c5fd; }
+    .status-recording { background: #7f1d1d; color: #fca5a5; animation: pulse 1.5s infinite; }
+    .status-processing { background: #78350f; color: #fcd34d; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .card {
+      background: #1e293b;
+      border-radius: 0.5rem;
+      padding: 1.2rem;
+      border: 1px solid #334155;
+    }
+    .card h3 {
+      color: #94a3b8;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+    }
+    .card .value {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #f8fafc;
+    }
+    .history {
+      background: #1e293b;
+      border-radius: 0.5rem;
+      border: 1px solid #334155;
+      overflow: hidden;
+    }
+    .history-header {
+      padding: 1rem 1.2rem;
+      border-bottom: 1px solid #334155;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .history-header h2 { color: #38bdf8; font-size: 1.2rem; }
+    .session {
+      padding: 1rem 1.2rem;
+      border-bottom: 1px solid #334155;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 1rem;
+      align-items: center;
+    }
+    .session:last-child { border-bottom: none; }
+    .session-id {
+      background: #334155;
+      color: #94a3b8;
+      padding: 0.3rem 0.7rem;
+      border-radius: 0.3rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    .session-info h4 { color: #f8fafc; margin-bottom: 0.3rem; }
+    .session-info .meta {
+      font-size: 0.8rem;
+      color: #64748b;
+    }
+    .session-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .btn {
+      background: #334155;
+      color: #e2e8f0;
+      border: none;
+      padding: 0.4rem 0.8rem;
+      border-radius: 0.3rem;
+      cursor: pointer;
+      font-size: 0.8rem;
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+    .btn:hover { background: #475569; }
+    .btn-primary { background: #0284c7; }
+    .btn-primary:hover { background: #0369a1; }
+    .empty {
+      padding: 3rem;
+      text-align: center;
+      color: #64748b;
+    }
+    .live-indicator {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #22c55e;
+      margin-right: 0.5rem;
+      animation: pulse 2s infinite;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🎙️ HERMES Dashboard</h1>
+    <div>
+      <span class="live-indicator"></span>
+      <span id="status-badge" class="status-badge status-{{ state.status | default('idle') }}">
+        {{ state.status | default('idle') }}
+      </span>
+    </div>
+  </header>
+
+  <div class="grid">
+    <div class="card">
+      <h3>Sessões totais</h3>
+      <div class="value">{{ state.session_count | default(0) }}</div>
+    </div>
+    <div class="card">
+      <h3>Última atualização</h3>
+      <div class="value" style="font-size: 1rem;">
+        {{ (state.last_update | default(''))[:19] if state.last_update else "—" }}
+      </div>
+    </div>
+    <div class="card">
+      <h3>Memória</h3>
+      <div class="value">{{ state.session_count | default(0) }} registros</div>
+    </div>
+  </div>
+
+  <div class="history">
+    <div class="history-header">
+      <h2>📋 Histórico de conversas</h2>
+      <button class="btn" onclick="location.reload()">🔄 Atualizar</button>
+    </div>
+
+    {% if history and history|length > 0 %}
+      {% for entry in history %}
+      <div class="session">
+        <div class="session-id">#{{ entry.id }}</div>
+        <div class="session-info">
+          <h4>{{ entry.tema }} · {{ entry.mode }}</h4>
+          <div class="meta">
+            {{ entry.timestamp[:16].replace("T", " ") }} · {{ "%.0f"|format(entry.duration | default(0)) }}s
+          </div>
+        </div>
+        <div class="session-actions">
+          <a href="/api/pdf/{{ entry.id }}" class="btn btn-primary" target="_blank">📄 PDF</a>
+          <a href="/api/export/{{ entry.id }}/json" class="btn" target="_blank">📦 JSON</a>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty">
+        Nenhuma conversa registrada ainda.<br>
+        Inicie o HERMES e grave sua primeira conversa!
+      </div>
+    {% endif %}
+  </div>
+
+  <script>
+    setInterval(() => location.reload(), 5000);
+  </script>
+</body>
+</html>
