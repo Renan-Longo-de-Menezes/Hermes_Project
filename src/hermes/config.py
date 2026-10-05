@@ -16,7 +16,7 @@ def _find_env() -> Path:
     return here.parent / ".env"
 
 
-load_dotenv(_find_env())
+load_dotenv(_find_env()) 
 
 
 class Settings(BaseModel):
