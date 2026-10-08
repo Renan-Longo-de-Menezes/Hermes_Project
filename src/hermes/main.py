@@ -6,7 +6,7 @@ import threading
 import time
 from pathlib import Path
 
-import numpy as np
+import numpy as np 
 import sounddevice as sd
 
 from hermes.audio.capture import AudioRecorder
