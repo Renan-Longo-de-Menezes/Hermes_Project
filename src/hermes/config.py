@@ -1,4 +1,4 @@
-"""Configurações centralizadas do HERMES (carrega do .env)."""
+"""Configurações centralizadas do HERMES (carrega do .env).""" 
 from __future__ import annotations
 
 import os
