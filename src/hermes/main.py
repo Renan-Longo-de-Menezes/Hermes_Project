@@ -1,4 +1,4 @@
-"""Orquestrador principal do HERMES — Fase 3."""
+"""Orquestrador principal do HERMES — Fase 3.""" 
 from __future__ import annotations
 
 import sys
